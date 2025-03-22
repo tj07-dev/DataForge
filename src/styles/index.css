@@ -8,9 +8,14 @@
 }
 
 /* Hide scrollbar for IE, Edge and Firefox */
-.hide-scrollbar {
+.m {
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
+}
+
+.phone-display {
+  padding: 1rem;
+  margin: 0;
 }
 
 /* Light Theme */

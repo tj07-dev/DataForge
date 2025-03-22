@@ -6,9 +6,9 @@ import {
   AlertCircle,
   Download,
   Edit,
+  Loader2,
   Moon,
   Plus,
-  Save,
   Search,
   Sun,
   Table as TableIcon,
@@ -481,13 +481,16 @@ const DatabaseExplorer: React.FC = () => {
       : rows;
 
   return (
-    <div className="min-h-[90vh] max-h-[90vh] my-10 mx-auto w-8/10 border rounded-2xl backdrop-filter backdrop-blur-sm flex flex-col transition-colors duration-300 overflow-y-scroll hide-scrollbar">
+    // <div className="min-h-[90vh]  max-h-[90vh] my-10 mx-auto w-8/10 border rounded-2xl backdrop-filter backdrop-blur-sm flex flex-col transition-colors duration-300 overflow-y-scroll hide-scrollbar">
+    <div
+      className={`min-h-[90vh] max-h-[90vh] my-4 md:mx-auto border m-2 md:w-8/10 sm rounded-2xl backdrop-filter backdrop-blur-sm flex flex-col transition-colors duration-300 ${showModal ? 'overflow-hidden z-1' : 'overflow-y-scroll'} hide-scrollbar`}
+    >
       <header className="bg-white dark:bg-black p-4 shadow-md sticky rounded-2xl top-0 z-10">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
+        <div className="flex flex-col sm:flex-row items-center justify-between w-full mx-auto gap-4">
           <h1 className="text-2xl font-bold flex items-center">
             <TableIcon className="mr-2 h-6 w-6 -600" /> DataForge
           </h1>
-          <div className="flex items-center space-x-4">
+          <div className="flex justify-between md:justify-end space-x-4 w-[100%]">
             <button
               onClick={toggleTheme}
               className="p-2 rounded-full border hover:border-amber-300 dark:hover:border-blue-300 transition-colors duration-200"
@@ -499,27 +502,41 @@ const DatabaseExplorer: React.FC = () => {
                 <Sun className="h-5 w-5 hover:text-blue-300 dark:hover:text-amber-300" />
               )}
             </button>
-            <label className="flex items-center px-4 py-2 border rounded-lg cursor-pointer hover:border-[#10b981] hover:text-[#10b981] transition-colors duration-200">
-              <Upload className="mr-2 h-4 w-4" />
-              <span>{isLoading ? 'Loading...' : 'Upload File'}</span>
-              <input
-                type="file"
-                accept=".db,.sqlite,.sqlite3,.sql"
-                onChange={(e) =>
-                  e.target.files && handleFileUpload(e.target.files[0])
-                }
-                className="hidden"
-                disabled={isLoading}
-              />
-            </label>
-            {dbInstance && (
-              <button
-                onClick={handleClearDatabase}
-                className="px-4 py-2 border border-red-500 rounded-lg text-red-500 hover:bg-red-700 hover:text-current flex items-center transition-colors duration-200"
-              >
-                <X className="mr-2 h-4 w-4" /> Clear Database
-              </button>
-            )}
+            <div className="flex gap-2">
+              <label className="hidden md:flex items-center px-4 py-2 border rounded-lg cursor-pointer hover:border-[#10b981] hover:text-[#10b981] transition-colors duration-200">
+                <Upload className="mr-2 h-4 w-4" />
+                <span>{isLoading ? 'Loading...' : 'Upload File'}</span>
+                <input
+                  type="file"
+                  accept=".db,.sqlite,.sqlite3,.sql"
+                  onChange={(e) =>
+                    e.target.files && handleFileUpload(e.target.files[0])
+                  }
+                  className="hidden"
+                  disabled={isLoading}
+                />
+              </label>
+              <label className="flex items-center md:hidden px-4 py-2 border rounded-lg cursor-pointer hover:border-[#10b981] hover:text-[#10b981] transition-colors duration-200">
+                <Upload className=" h-4 w-4" />
+                <input
+                  type="file"
+                  accept=".db,.sqlite,.sqlite3,.sql"
+                  onChange={(e) =>
+                    e.target.files && handleFileUpload(e.target.files[0])
+                  }
+                  className="hidden"
+                  disabled={isLoading}
+                />
+              </label>
+              {dbInstance && (
+                <button
+                  onClick={handleClearDatabase}
+                  className="px-4 py-2 border border-red-500 rounded-lg text-red-500 hover:bg-red-700 hover:text-current flex items-center transition-colors duration-200"
+                >
+                  <X className="mr-2 h-4 w-4" /> Clear Database
+                </button>
+              )}
+            </div>
           </div>
         </div>
         {tables.length > 0 && (
@@ -527,7 +544,10 @@ const DatabaseExplorer: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              {...{ className: 'mt-5 flex flex-wrap gap-2' }}
+              {...{
+                className:
+                  'mt-5 flex flex-row overflow-x-scroll md:overflow-hidden md:flex-wrap gap-2 hide-scrollbar ',
+              }}
             >
               {tables.map((table) => (
                 <button
@@ -540,8 +560,8 @@ const DatabaseExplorer: React.FC = () => {
               ))}
             </motion.div>
             {selectedTable && (
-              <div className="p-4 border-b flex flex-col sm:flex-row justify-between items-center gap-4">
-                <h2 className="text-xl font-semibold">
+              <div className="py-4  border-b flex flex-row justify-between items-center gap-4 flex-3">
+                {/* <h2 className="text-xl font-semibold">
                   Table: {selectedTable} (
                   {
                     filterRows(
@@ -549,43 +569,62 @@ const DatabaseExplorer: React.FC = () => {
                     ).length
                   }{' '}
                   rows)
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" />
+                </h2> */}
+                <div className="relative flex-2">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search rows..."
+                    style={{ width: '-webkit-fill-available' }}
+                    className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white  dark:bg-black/35 focus:outline-none focus:ring-2 focus:ring-[#10b981]"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2 flex-1 justify-end">
+                  <label
+                    className="hidden md:flex items-center px-4 py-2 border rounded-lg cursor-pointer hover:border-[#10b981] hover:text-[#10b981] transition-colors duration-200"
+                    title="Upload another file"
+                  >
+                    {isLoading ? (
+                      <Loader2 className=" h-4 w-4" />
+                    ) : (
+                      <Upload className=" h-4 w-4" />
+                    )}
                     <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search rows..."
-                      className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      type="file"
+                      accept=".db,.sqlite,.sqlite3,.sql"
+                      onChange={(e) =>
+                        e.target.files && handleFileUpload(e.target.files[0])
+                      }
+                      className="hidden"
+                      disabled={isLoading}
                     />
-                  </div>
-                  <button
-                    onClick={() => {
-                      setFormData({});
-                      setShowModal('add');
-                    }}
-                    className="px-4 py-2 border text-green-400 border-green-400 rounded-lg hover:bg-green-700 hover:text-current flex items-center transition-colors duration-200"
+                  </label>
+
+                  {undoStack.length > 0 && (
+                    <button
+                      onClick={handleUndo}
+                      disabled={undoStack.length <= 0}
+                      className="px-4 py-2 border border-gray-200 rounded-lg hover:border-gray-700 disabled:border-gray-600 disabled:text-gray-600 text-gray-200 flex items-center transition-colors duration-200"
+                    >
+                      <Undo2 className="mr-2 h-4 w-4" /> Undo
+                    </button>
+                  )}
+                  <div
+                    className="relative"
+                    ref={exportMenuRef}
+                    title="Export Data"
                   >
-                    <Plus className="mr-2 h-4 w-4" /> Add Row
-                  </button>
-                  <button
-                    onClick={handleUndo}
-                    disabled={undoStack.length <= 0}
-                    className="px-4 py-2 border border-gray-200 rounded-lg hover:border-gray-700 disabled:border-gray-600 disabled:text-gray-600 text-gray-200 flex items-center transition-colors duration-200"
-                  >
-                    <Undo2 className="mr-2 h-4 w-4" /> Undo
-                  </button>
-                  <div className="relative" ref={exportMenuRef}>
                     <button
                       onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
                       className="px-4 py-2 border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-700 hover:text-current flex items-center transition-colors duration-200"
                     >
-                      <Download className="mr-2 h-4 w-4" /> Export
+                      <Download className="h-6 w-4" />
                     </button>
+
                     {isExportMenuOpen && (
-                      <div className="absolute bg-white dark:bg-gray-800 shadow-lg rounded-lg mt-2 right-0 z-10">
+                      <div className="absolute bg-white dark:bg-gray-800 shadow-lg rounded-lg mt-2 right-0 z-10 w-[12rem]">
                         {[
                           { label: 'Full Database (SQLite)', value: 'full-db' },
                           { label: 'Full Database (SQL)', value: 'full-sql' },
@@ -618,11 +657,21 @@ const DatabaseExplorer: React.FC = () => {
                     )}
                   </div>
                   <button
+                    onClick={() => {
+                      setFormData({});
+                      setShowModal('add');
+                    }}
+                    className="px-4 py-2 border text-green-400 border-green-400 rounded-lg hover:bg-green-700 hover:text-current flex items-center transition-colors duration-200"
+                    title="Add Row"
+                  >
+                    <Plus className=" h-4 w-4" />
+                  </button>
+                  <button
                     onClick={() => handleDeleteTable(selectedTable)}
                     className="px-4 py-2 border border-red-500 rounded-lg text-red-500 flex hover:text-current hover:bg-red-700 items-center transition-colors duration-200"
                     title={`Delete ${selectedTable}`}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                    <Trash2 className=" h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -670,10 +719,24 @@ const DatabaseExplorer: React.FC = () => {
             animate={{ opacity: 1 }}
             {...{ className: 'text-center py-10' }}
           >
-            <Upload className="mx-auto h-16 w-16 -500 mb-6" />
-            <p className="">
-              Upload a SQLite database or SQL file to get started.
-            </p>
+            {/* <Upload className="mx-auto h-16 w-16 -500 mb-6" /> */}
+            <label className="flex flex-col mx-auto items-center px-4 py-2 border rounded-lg cursor-pointer hover:border-[#10b981] hover:text-[#10b981] transition-colors duration-200">
+              <Upload className="mx-auto h-16 w-16 -500 mb-6" />
+              <span>
+                {isLoading
+                  ? 'Loading...'
+                  : 'Upload a SQLite database or SQL file to get started.'}
+              </span>
+              <input
+                type="file"
+                accept=".db,.sqlite,.sqlite3,.sql"
+                onChange={(e) =>
+                  e.target.files && handleFileUpload(e.target.files[0])
+                }
+                className="hidden"
+                disabled={isLoading}
+              />
+            </label>
           </motion.div>
         )}
         <div className="pb-10">
@@ -776,86 +839,129 @@ const DatabaseExplorer: React.FC = () => {
         </div>
       </main>
 
+      {/* Export Modal */}
       {showModal === 'export' && (
         <Modal
-          title={`Export Full Database as ${exportFormat === 'full-db' ? 'SQLite' : 'SQL'}`}
+          title={`Export ${exportFormat?.includes('full') ? 'Database' : 'Table'}`}
           onClose={handleCloseModal}
+          size="lg"
+          ariaLabel="Export database dialog"
         >
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              console.log(
+                'Exporting with format:',
+                exportFormat,
+                'filename:',
+                exportFilename
+              );
               exportDatabase(
                 exportFormat as 'full-db' | 'full-sql',
                 exportFilename
               );
-              setShowModal(null);
+              handleCloseModal();
               setIsExportMenuOpen(false);
             }}
+            className="space-y-6"
           >
-            <div className="mb-4">
-              <label className="block dark: font-medium mb-2">Filename</label>
-              <input
-                type="text"
-                value={exportFilename}
-                onChange={(e) => setExportFilename(e.target.value)}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="Enter filename"
-              />
-              <span className="text-sm text-gray-500">
-                .{exportFormat === 'full-db' ? 'db' : 'sql'} will be appended
-              </span>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Filename
+                </label>
+                <input
+                  type="text"
+                  value={exportFilename}
+                  onChange={(e) => setExportFilename(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-black/80 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-[#10b981] focus:border-transparent"
+                  placeholder="Enter filename"
+                  aria-label="Export filename"
+                />
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  File will be saved as {exportFilename}.
+                  {exportFormat === 'full-db' ? 'db' : 'sql'}
+                </p>
+              </div>
             </div>
-            <button
-              type="submit"
-              className="w-full py-3 bg-indigo-600 rounded-lg hover:bg-indigo-700 flex items-center justify-center transition-colors duration-200"
-            >
-              <Save className="mr-2 h-4 w-4" /> Export
-            </button>
+            <div className="flex gap-4 justify-end">
+              <button
+                type="button"
+                onClick={handleCloseModal}
+                className="px-6 py-2 text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+              >
+                Export
+              </button>
+            </div>
           </form>
         </Modal>
       )}
 
-      {showModal &&
-        (showModal === 'add' || showModal === 'edit') &&
-        selectedTable && (
-          <Modal
-            title={showModal === 'add' ? 'Add New Row' : 'Edit Row'}
-            onClose={() => setShowModal(null)}
-            {...{ className: 'hide-scroll' }}
+      {/* Add/Edit Modal */}
+      {(showModal === 'add' || showModal === 'edit') && (
+        <Modal
+          title={showModal === 'add' ? 'Add New Row' : 'Edit Row'}
+          onClose={handleCloseModal}
+          ariaLabel={`${showModal} row dialog`}
+          size="lg"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              console.log('Submitting form for', showModal);
+              showModal === 'add' ? handleAddRow() : handleEditRow();
+            }}
+            className="space-y-6"
           >
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                showModal === 'add' ? handleAddRow() : handleEditRow();
-              }}
-            >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {tables
                 .find((t) => t.name === selectedTable)
                 ?.columns.map((col) => (
-                  <div key={col} className="mb-4">
-                    <label className="block dark: font-medium mb-2">
+                  <div key={col} className="space-y-2">
+                    <label
+                      htmlFor={`input-${col}`}
+                      className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
                       {col}
                     </label>
                     <input
+                      id={`input-${col}`}
                       type="text"
                       value={formData[col] || ''}
                       onChange={(e) =>
                         setFormData({ ...formData, [col]: e.target.value })
                       }
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-black/80 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-[#10b981] focus:border-transparent"
                       placeholder={`Enter ${col}`}
+                      aria-required="true"
                     />
                   </div>
                 ))}
+            </div>
+            <div className="flex gap-4 justify-end">
+              <button
+                type="button"
+                onClick={handleCloseModal}
+                className="px-6 py-2 text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors"
+              >
+                Cancel
+              </button>
               <button
                 type="submit"
-                className="w-full py-3 bg-indigo-600 rounded-lg hover:bg-indigo-700 flex items-center justify-center transition-colors duration-200"
+                className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
               >
-                <Save className="mr-2 h-4 w-4" /> Save
+                Save Changes
               </button>
-            </form>
-          </Modal>
-        )}
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 };

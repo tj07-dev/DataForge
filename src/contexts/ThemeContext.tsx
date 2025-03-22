@@ -7,12 +7,12 @@ const ThemeContext = createContext<{
   toggleTheme: () => void;
 }>({
   accent: '#109',
-  theme: 'light',
+  theme: 'dark',
   toggleTheme: () => {},
 });
 
 const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [theme, setTheme] = useState<string>('light');
+  const [theme, setTheme] = useState<string>('dark');
 
   const [accent] = useState<string>('[#000000]');
   useEffect(() => {
