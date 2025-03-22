@@ -51,6 +51,16 @@ html.dark {
   --border-glassmorphic-dark: rgba(255, 255, 255, 0.18);
 }
 
+::selection {
+  background: #10b981;
+  color: white;
+}
+
+.dark ::selection {
+  background: #10b981;
+  color: black;
+}
+
 body {
   /* background-color: var(--bg-color); */
   color: var(--color-text);

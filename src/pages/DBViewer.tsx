@@ -69,7 +69,13 @@ const DatabaseExplorer: React.FC = () => {
   }, []);
 
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
-
+  const handleCloseModal = () => {
+    console.log('Closing modal, resetting states');
+    setShowModal(null);
+    setExportFormat(null); // Reset export format
+    setEditRowIndex(null); // Reset edit index
+    setFormData({}); // Reset form data
+  };
   const handleFileUpload = async (file: File) => {
     setIsLoading(true);
     try {
@@ -303,16 +309,23 @@ const DatabaseExplorer: React.FC = () => {
       toast.error('Failed to delete table');
     }
   };
-
   const handleDeleteRow = (rowIndex: number) => {
     if (!selectedTable || !dbInstance) return;
     try {
+      // Fetch the actual ROWID for the row at the given index
+      const rowIdResult = dbInstance.exec(
+        `SELECT ROWID FROM "${selectedTable}" LIMIT 1 OFFSET ${rowIndex}`
+      );
+      if (!rowIdResult[0]?.values[0]) {
+        throw new Error('Row not found');
+      }
+      const rowId = rowIdResult[0].values[0][0];
       const rowData = tables.find((t) => t.name === selectedTable)?.rows[
         rowIndex
       ];
-      dbInstance.run(`DELETE FROM "${selectedTable}" WHERE ROWID = ?`, [
-        rowIndex + 1,
-      ]);
+
+      // Delete the row using the actual ROWID
+      dbInstance.run(`DELETE FROM "${selectedTable}" WHERE ROWID = ?`, [rowId]);
       setUndoStack([
         ...undoStack,
         {
@@ -325,6 +338,7 @@ const DatabaseExplorer: React.FC = () => {
       refreshTableData();
       toast.success('Row deleted successfully!');
     } catch (err) {
+      console.error('Delete row error:', err);
       toast.error('Failed to delete row');
     }
   };
@@ -741,13 +755,13 @@ const DatabaseExplorer: React.FC = () => {
                               setEditRowIndex(i);
                               setShowModal('edit');
                             }}
-                            className="p-1 text-blue-300 -500 hover:text-blue-700 transition-colors duration-200"
+                            className="p-1 text-blue-500 dark:text-blue-300 hover:text-blue-700 dark:hover:text-blue-500 transition-colors duration-200"
                           >
                             <Edit className="h-5 w-5" />
                           </button>
                           <button
                             onClick={() => handleDeleteRow(i)}
-                            className="p-1 text-red-500 hover:text-red-700 transition-colors duration-200"
+                            className="p-1 text-red-500 dark:text-red-300 hover:text-red-700 dark:hover:text-red-500 transition-colors duration-200"
                           >
                             <Trash2 className="h-5 w-5" />
                           </button>
@@ -765,7 +779,7 @@ const DatabaseExplorer: React.FC = () => {
       {showModal === 'export' && (
         <Modal
           title={`Export Full Database as ${exportFormat === 'full-db' ? 'SQLite' : 'SQL'}`}
-          onClose={() => setShowModal(null)}
+          onClose={handleCloseModal}
         >
           <form
             onSubmit={(e) => {
