@@ -513,7 +513,7 @@ const DatabaseExplorer: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-5 flex flex-wrap gap-2"
+              {...{ className: 'mt-5 flex flex-wrap gap-2' }}
             >
               {tables.map((table) => (
                 <button
@@ -623,7 +623,10 @@ const DatabaseExplorer: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-red-100 dark:bg-red-900 border-l-4 border-red-500 p-4 mb-6 rounded-r-lg flex flex-col"
+            {...{
+              className:
+                'bg-red-100 dark:bg-red-900 border-l-4 border-red-500 p-4 mb-6 rounded-r-lg flex flex-col',
+            }}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center">
@@ -651,7 +654,7 @@ const DatabaseExplorer: React.FC = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-10"
+            {...{ className: 'text-center py-10' }}
           >
             <Upload className="mx-auto h-16 w-16 -500 mb-6" />
             <p className="">
@@ -664,7 +667,7 @@ const DatabaseExplorer: React.FC = () => {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="rounded-xl shadow-lg overflow-hidden"
+              {...{ className: 'rounded-xl shadow-lg overflow-hidden' }}
             >
               <div className="overflow-y-scroll hide-scrollbar">
                 <table className="w-full">
@@ -705,7 +708,10 @@ const DatabaseExplorer: React.FC = () => {
                         key={i}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="border-t hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors duration-150"
+                        {...{
+                          className:
+                            'border-t hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors duration-150',
+                        }}
                       >
                         {row.map((cell, j) => (
                           <td
