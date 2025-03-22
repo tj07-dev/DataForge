@@ -15,6 +15,7 @@ import {
   Trash2,
   Undo2,
   Upload,
+  X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
@@ -31,7 +32,9 @@ const DatabaseExplorer: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [dbInstance, setDbInstance] = useState<any>(null);
-  const [showModal, setShowModal] = useState<'add' | 'edit' | null>(null);
+  const [showModal, setShowModal] = useState<'add' | 'edit' | 'export' | null>(
+    null
+  );
   const [editRowIndex, setEditRowIndex] = useState<number | null>(null);
   const [formData, setFormData] = useState<RowData>({});
   const [undoStack, setUndoStack] = useState<UndoAction[]>([]);
@@ -39,6 +42,10 @@ const DatabaseExplorer: React.FC = () => {
     {}
   );
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [exportFormat, setExportFormat] = useState<string | null>(null);
+  const [exportFilename, setExportFilename] =
+    useState<string>('modified_database');
+  const [isErrorExpanded, setIsErrorExpanded] = useState(false);
 
   const { theme, toggleTheme } = useTheme();
   const resizingRef = useRef<{
@@ -46,8 +53,6 @@ const DatabaseExplorer: React.FC = () => {
     startX: number;
     startWidth: number;
   } | null>(null);
-
-  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -63,6 +68,8 @@ const DatabaseExplorer: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+
   const handleFileUpload = async (file: File) => {
     setIsLoading(true);
     try {
@@ -71,51 +78,34 @@ const DatabaseExplorer: React.FC = () => {
 
       if (file.name.endsWith('.sql')) {
         const sqlText = await file.text();
-
-        // Preprocess: Remove comments and normalize quotes
         const cleanedSql = sqlText
-          .replace(/--.*$/gm, '') // Remove single-line comments
-          .replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
-          .replace(/`/g, '"'); // Convert MySQL backticks to SQLite double quotes
-
-        // Split into statements, handling multi-line statements better
+          .replace(/--.*$/gm, '')
+          .replace(/\/\*[\s\S]*?\*\//g, '')
+          .replace(/`/g, '"');
         const statements = cleanedSql
           .split(';')
           .map((s) => s.trim())
           .filter((s) => s.length > 0 && !s.match(/^\s*$/));
 
-        if (statements.length === 0) {
+        if (statements.length === 0)
           throw new Error('No valid SQL statements found in the file.');
-        }
 
         const createdTables = new Set<string>();
-
         for (let statement of statements) {
           try {
-            // Normalize statement for SQLite
-            statement = statement.replace(
-              /\bAUTO_INCREMENT\b/gi,
-              'AUTOINCREMENT'
-            ); // MySQL -> SQLite
-            statement = statement.replace(/\bUNSIGNED\b/gi, ''); // SQLite doesn't support UNSIGNED
-            statement = statement.replace(/\bENUM\([^)]+\)/gi, 'TEXT'); // Replace ENUM with TEXT
-            statement = statement.replace(/\bCHARACTER SET [^ ]+/gi, ''); // Remove charset
-            statement = statement.replace(/\bCOLLATE [^ ]+/gi, ''); // Remove collate
-
-            // Execute the statement
+            statement = statement
+              .replace(/\bAUTO_INCREMENT\b/gi, 'AUTOINCREMENT')
+              .replace(/\bUNSIGNED\b/gi, '')
+              .replace(/\bENUM\([^)]+\)/gi, 'TEXT')
+              .replace(/\bCHARACTER SET [^ ]+/gi, '')
+              .replace(/\bCOLLATE [^ ]+/gi, '');
             db.run(statement);
-
-            // Track table creation
             const createMatch = statement.match(
               /CREATE\s+TABLE\s+"?([^"\s]+)"?/i
             );
-            if (createMatch) {
-              createdTables.add(createMatch[1]);
-            }
+            if (createMatch) createdTables.add(createMatch[1]);
           } catch (err) {
             const errMsg = err instanceof Error ? err.message : String(err);
-
-            // Handle "no such table" by inferring table structure from INSERT
             if (
               statement.toLowerCase().includes('insert into') &&
               errMsg.includes('no such table')
@@ -135,19 +125,16 @@ const DatabaseExplorer: React.FC = () => {
                     const values = valuesMatch[1]
                       .split(',')
                       .map((v) => v.trim());
-
-                    // Infer column types based on values (basic heuristic)
                     const columnDefs = columns.map((col, idx) => {
                       const val = values[idx].trim();
                       if (val.match(/^\d+$/)) return `"${col}" INTEGER`;
                       if (val.match(/^\d+\.\d+$/)) return `"${col}" REAL`;
                       return `"${col}" TEXT`;
                     });
-
                     const createTableStmt = `CREATE TABLE "${tableName}" (${columnDefs.join(', ')})`;
                     db.run(createTableStmt);
                     createdTables.add(tableName);
-                    db.run(statement); // Retry the INSERT
+                    db.run(statement);
                   }
                 }
               }
@@ -161,7 +148,6 @@ const DatabaseExplorer: React.FC = () => {
           }
         }
 
-        // Handle multi-row INSERT statements (e.g., MySQL-style)
         for (const statement of statements) {
           if (
             statement.toLowerCase().includes('insert into') &&
@@ -174,7 +160,6 @@ const DatabaseExplorer: React.FC = () => {
               const tableName = tableNameMatch[1];
               const columnsMatch = statement.match(/\(([^)]+)\)/);
               const valuesSection = statement.match(/VALUES\s*([\s\S]+)/i)?.[1];
-
               if (columnsMatch && valuesSection) {
                 const columns = columnsMatch[1]
                   .split(',')
@@ -183,7 +168,6 @@ const DatabaseExplorer: React.FC = () => {
                   .split('),')
                   .map((row) => row.replace(/^\s*\(|\)\s*$/g, '').trim())
                   .filter((row) => row.length > 0);
-
                 for (const row of valueRows) {
                   const values = row.split(',').map((v) => v.trim());
                   const placeholders = columns.map(() => '?').join(', ');
@@ -195,7 +179,6 @@ const DatabaseExplorer: React.FC = () => {
           }
         }
       } else {
-        // Handle .db, .sqlite, .sqlite3 files
         const uint8Array = new Uint8Array(await file.arrayBuffer());
         db = new SQL.Database(uint8Array);
       }
@@ -207,11 +190,10 @@ const DatabaseExplorer: React.FC = () => {
         .map((result) => result.values.map((row) => row[0]))
         .flat() as string[];
 
-      if (tableNames.length === 0) {
+      if (tableNames.length === 0)
         throw new Error(
           'No tables found in the database after processing the file.'
         );
-      }
 
       const tableData: TableData[] = tableNames.map((tableName) => {
         const result = db.exec(`SELECT * FROM "${tableName}"`)[0];
@@ -366,18 +348,45 @@ const DatabaseExplorer: React.FC = () => {
       toast.error('Failed to undo action');
     }
   };
+
+  const handleClearDatabase = () => {
+    if (
+      !dbInstance ||
+      !confirm(
+        'Are you sure you want to clear the entire database? This cannot be undone.'
+      )
+    )
+      return;
+    setDbInstance(null);
+    setTables([]);
+    setSelectedTable(null);
+    setUndoStack([]);
+    setError(null);
+    toast.success('Database cleared successfully!');
+  };
+
   const exportDatabase = (
-    format: 'sqlite' | 'csv' | 'json' | 'sql' | 'full-db'
+    format: 'sqlite' | 'csv' | 'json' | 'sql' | 'full-db' | 'full-sql',
+    filename?: string
   ) => {
     if (!dbInstance) return;
 
     let blob: Blob;
-    let filename: string;
+    let defaultFilename: string;
 
-    if (format === 'full-db') {
-      // Export the entire modified database as SQLite
-      blob = new Blob([dbInstance.export()], { type: 'application/x-sqlite3' });
-      filename = 'modified_database.db';
+    if (format === 'full-db' || format === 'full-sql') {
+      if (format === 'full-db') {
+        blob = new Blob([dbInstance.export()], {
+          type: 'application/x-sqlite3',
+        });
+        defaultFilename = `${filename || exportFilename}.db`;
+      } else {
+        const allSql = tables
+          .map((table) => exportToSQL(dbInstance, table.name))
+          .join('\n\n');
+        blob = new Blob([allSql], { type: 'text/sql' });
+        defaultFilename = `${filename || exportFilename}.sql`;
+      }
     } else if (!selectedTable) {
       toast.error('Please select a table to export in this format.');
       return;
@@ -388,37 +397,44 @@ const DatabaseExplorer: React.FC = () => {
           blob = new Blob([dbInstance.export()], {
             type: 'application/x-sqlite3',
           });
-          filename = `${selectedTable}.db`;
+          defaultFilename = `${selectedTable}.db`;
           break;
         case 'csv':
           blob = new Blob([exportToCSV(table!)], { type: 'text/csv' });
-          filename = `${selectedTable}.csv`;
+          defaultFilename = `${selectedTable}.csv`;
           break;
         case 'json':
           blob = new Blob([exportToJSON(table!)], { type: 'application/json' });
-          filename = `${selectedTable}.json`;
+          defaultFilename = `${selectedTable}.json`;
           break;
         case 'sql':
           blob = new Blob([exportToSQL(dbInstance, selectedTable)], {
             type: 'text/sql',
           });
-          filename = `${selectedTable}.sql`;
+          defaultFilename = `${selectedTable}.sql`;
           break;
         default:
-          return; // Unknown format
+          return;
       }
     }
 
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = filename;
+    a.download = defaultFilename;
     a.click();
     URL.revokeObjectURL(url);
     toast.success(
-      `Exported as ${format === 'full-db' ? 'Full Database (SQLite)' : format.toUpperCase()} successfully!`
+      `Exported as ${format === 'full-db' ? 'Full Database (SQLite)' : format === 'full-sql' ? 'Full Database (SQL)' : format.toUpperCase()} successfully!`
     );
   };
+
+  const handleExportWithCustomName = (format: 'full-db' | 'full-sql') => {
+    setExportFormat(format);
+    setExportFilename('modified_database');
+    setShowModal('export');
+  };
+
   const startResizing = (e: React.MouseEvent, column: string) => {
     const th = (e.target as HTMLElement).closest('th');
     if (!th) return;
@@ -482,6 +498,14 @@ const DatabaseExplorer: React.FC = () => {
                 disabled={isLoading}
               />
             </label>
+            {dbInstance && (
+              <button
+                onClick={handleClearDatabase}
+                className="px-4 py-2 border border-red-500 rounded-lg text-red-500 hover:bg-red-700 hover:text-current flex items-center transition-colors duration-200"
+              >
+                <X className="mr-2 h-4 w-4" /> Clear Database
+              </button>
+            )}
           </div>
         </div>
         {tables.length > 0 && (
@@ -495,20 +519,22 @@ const DatabaseExplorer: React.FC = () => {
                 <button
                   key={table.name}
                   onClick={() => setSelectedTable(table.name)}
-                  className={`px-4 py-2 rounded-lg transition-all duration-200 ${
-                    selectedTable === table.name
-                      ? 'border border-[#10b981] text-[#10b981]'
-                      : 'border cursor-pointer hover:border-[#10b981] hover:text-[#10b981]'
-                  }`}
+                  className={`px-4 py-2 rounded-lg transition-all duration-200 ${selectedTable === table.name ? 'border border-[#10b981] text-[#10b981]' : 'border cursor-pointer hover:border-[#10b981] hover:text-[#10b981]'}`}
                 >
                   {table.name}
                 </button>
               ))}
             </motion.div>
             {selectedTable && (
-              <div className="p-4 border-b   flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="p-4 border-b flex flex-col sm:flex-row justify-between items-center gap-4">
                 <h2 className="text-xl font-semibold">
-                  Table: {selectedTable}
+                  Table: {selectedTable} (
+                  {
+                    filterRows(
+                      tables.find((t) => t.name === selectedTable)?.rows || []
+                    ).length
+                  }{' '}
+                  rows)
                 </h2>
                 <div className="flex flex-wrap gap-2">
                   <div className="relative">
@@ -547,7 +573,8 @@ const DatabaseExplorer: React.FC = () => {
                     {isExportMenuOpen && (
                       <div className="absolute bg-white dark:bg-gray-800 shadow-lg rounded-lg mt-2 right-0 z-10">
                         {[
-                          { label: 'Full Database', value: 'full-db' },
+                          { label: 'Full Database (SQLite)', value: 'full-db' },
+                          { label: 'Full Database (SQL)', value: 'full-sql' },
                           { label: 'SQLite (Table)', value: 'sqlite' },
                           { label: 'CSV', value: 'csv' },
                           { label: 'JSON', value: 'json' },
@@ -556,8 +583,17 @@ const DatabaseExplorer: React.FC = () => {
                           <button
                             key={option.value}
                             onClick={() => {
-                              exportDatabase(option.value as any);
-                              setIsExportMenuOpen(false);
+                              if (
+                                option.value === 'full-db' ||
+                                option.value === 'full-sql'
+                              ) {
+                                handleExportWithCustomName(
+                                  option.value as 'full-db' | 'full-sql'
+                                );
+                              } else {
+                                exportDatabase(option.value as any);
+                                setIsExportMenuOpen(false);
+                              }
                             }}
                             className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
                           >
@@ -587,10 +623,27 @@ const DatabaseExplorer: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-red-100 dark:bg-red-900 border-l-4 border-red-500 p-4 mb-6 rounded-r-lg flex items-center"
+            className="bg-red-100 dark:bg-red-900 border-l-4 border-red-500 p-4 mb-6 rounded-r-lg flex flex-col"
           >
-            <AlertCircle className="h-5 w-5 -500 mr-2" />
-            <span className="-700 dark:-300">{error}</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <AlertCircle className="h-5 w-5 -500 mr-2" />
+                <span className="-700 dark:-300">
+                  Errors occurred during processing
+                </span>
+              </div>
+              <button
+                onClick={() => setIsErrorExpanded(!isErrorExpanded)}
+                className="text-sm underline"
+              >
+                {isErrorExpanded ? 'Hide Details' : 'Show Details'}
+              </button>
+            </div>
+            {isErrorExpanded && (
+              <pre className="mt-2 text-sm -700 dark:-300 whitespace-pre-wrap">
+                {error}
+              </pre>
+            )}
           </motion.div>
         )}
 
@@ -701,46 +754,88 @@ const DatabaseExplorer: React.FC = () => {
             </motion.div>
           )}
         </div>
-
-        {tables.length > 0 && <></>}
       </main>
 
-      {showModal && selectedTable && (
+      {showModal === 'export' && (
         <Modal
-          title={showModal === 'add' ? 'Add New Row' : 'Edit Row'}
+          title={`Export Full Database as ${exportFormat === 'full-db' ? 'SQLite' : 'SQL'}`}
           onClose={() => setShowModal(null)}
         >
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              showModal === 'add' ? handleAddRow() : handleEditRow();
+              exportDatabase(
+                exportFormat as 'full-db' | 'full-sql',
+                exportFilename
+              );
+              setShowModal(null);
+              setIsExportMenuOpen(false);
             }}
           >
-            {tables
-              .find((t) => t.name === selectedTable)
-              ?.columns.map((col) => (
-                <div key={col} className="mb-4">
-                  <label className="block dark: font-medium mb-2">{col}</label>
-                  <input
-                    type="text"
-                    value={formData[col] || ''}
-                    onChange={(e) =>
-                      setFormData({ ...formData, [col]: e.target.value })
-                    }
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder={`Enter ${col}`}
-                  />
-                </div>
-              ))}
+            <div className="mb-4">
+              <label className="block dark: font-medium mb-2">Filename</label>
+              <input
+                type="text"
+                value={exportFilename}
+                onChange={(e) => setExportFilename(e.target.value)}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Enter filename"
+              />
+              <span className="text-sm text-gray-500">
+                .{exportFormat === 'full-db' ? 'db' : 'sql'} will be appended
+              </span>
+            </div>
             <button
               type="submit"
               className="w-full py-3 bg-indigo-600 rounded-lg hover:bg-indigo-700 flex items-center justify-center transition-colors duration-200"
             >
-              <Save className="mr-2 h-4 w-4" /> Save
+              <Save className="mr-2 h-4 w-4" /> Export
             </button>
           </form>
         </Modal>
       )}
+
+      {showModal &&
+        (showModal === 'add' || showModal === 'edit') &&
+        selectedTable && (
+          <Modal
+            title={showModal === 'add' ? 'Add New Row' : 'Edit Row'}
+            onClose={() => setShowModal(null)}
+            {...{ className: 'hide-scroll' }}
+          >
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                showModal === 'add' ? handleAddRow() : handleEditRow();
+              }}
+            >
+              {tables
+                .find((t) => t.name === selectedTable)
+                ?.columns.map((col) => (
+                  <div key={col} className="mb-4">
+                    <label className="block dark: font-medium mb-2">
+                      {col}
+                    </label>
+                    <input
+                      type="text"
+                      value={formData[col] || ''}
+                      onChange={(e) =>
+                        setFormData({ ...formData, [col]: e.target.value })
+                      }
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      placeholder={`Enter ${col}`}
+                    />
+                  </div>
+                ))}
+              <button
+                type="submit"
+                className="w-full py-3 bg-indigo-600 rounded-lg hover:bg-indigo-700 flex items-center justify-center transition-colors duration-200"
+              >
+                <Save className="mr-2 h-4 w-4" /> Save
+              </button>
+            </form>
+          </Modal>
+        )}
     </div>
   );
 };
