@@ -1,17 +1,23 @@
 import { Route, Routes } from 'react-router-dom';
+
 import ErrorBoundary from './components/ErrorBoundary';
-import Layout from './components/Layout';
-import Home from './pages/Home';
+import { Footer } from './components/Footer';
+import NeuralParticles from './components/Particals';
+import { ThemeProvider } from './contexts/ThemeContext';
+import DBViewer from './pages/DBViewer';
 
 function App() {
   return (
-    <ErrorBoundary>
-      <Layout>
+    <ThemeProvider>
+      <ErrorBoundary>
+        <NeuralParticles />
+
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<DBViewer />} />
         </Routes>
-      </Layout>
-    </ErrorBoundary>
+        <Footer />
+      </ErrorBoundary>
+    </ThemeProvider>
   );
 }
 
