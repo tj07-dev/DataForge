@@ -471,7 +471,7 @@ const DatabaseExplorer: React.FC = () => {
       <header className="bg-white dark:bg-black p-4 shadow-md sticky rounded-2xl top-0 z-10">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <h1 className="text-2xl font-bold flex items-center">
-            <TableIcon className="mr-2 h-6 w-6 -600" /> Database Explorer
+            <TableIcon className="mr-2 h-6 w-6 -600" /> DataForge
           </h1>
           <div className="flex items-center space-x-4">
             <button

@@ -11,7 +11,6 @@ function App() {
     <ThemeProvider>
       <ErrorBoundary>
         <NeuralParticles />
-
         <Routes>
           <Route path="/" element={<DBViewer />} />
         </Routes>
