@@ -857,7 +857,10 @@ const DatabaseExplorer: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-5 flex flex-row overflow-x-scroll md:overflow-hidden md:flex-wrap gap-2 hide-scrollbar"
+              {...{
+                className:
+                  'mt-5 flex flex-row overflow-x-scroll md:overflow-hidden md:flex-wrap gap-2 hide-scrollbar',
+              }}
             >
               {tables.map((table) => (
                 <button
