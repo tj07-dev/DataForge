@@ -355,7 +355,19 @@ const DatabaseExplorer: React.FC = () => {
           `INSERT INTO "${lastAction.tableName}" VALUES (${columns.map(() => '?').join(',')})`,
           lastAction.data
         );
+        // const rowIdResult = dbInstance.exec(
+        //   `SELECT ROWID FROM "${lastAction.tableName}" ORDER BY ROWID DESC LIMIT 1`
+        // );
+        // const newRowId = rowIdResult[0]?.values[0]?.[0];
+        // console.log(newRowId);
         toast.success('Row restored successfully!');
+        // Scroll to the restored row
+        // setTimeout(() => {
+        //   const tableElement = document.querySelector('table');
+        //   const restoredRow =
+        //     tableElement?.querySelectorAll('tbody tr')[newRowId];
+        //   restoredRow?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // }, 100);
       }
       setUndoStack(undoStack.slice(0, -1));
       refreshTableData();
@@ -482,176 +494,9 @@ const DatabaseExplorer: React.FC = () => {
       : rows;
 
   return (
-    // <div className="min-h-[90vh]  max-h-[90vh] my-10 mx-auto w-8/10 border rounded-2xl backdrop-filter backdrop-blur-sm flex flex-col transition-colors duration-300 overflow-y-scroll hide-scrollbar">
     <div
       className={`min-h-[90vh] max-h-[90vh] my-4 md:mx-auto border m-2 md:w-8/10 sm rounded-2xl backdrop-filter backdrop-blur-sm flex flex-col transition-colors duration-300 ${showModal ? 'overflow-hidden z-1' : 'overflow-y-scroll'} hide-scrollbar`}
     >
-      {/* <header className="bg-white dark:bg-black p-4 shadow-md sticky rounded-2xl top-0 z-10">
-        <div className="flex flex-col sm:flex-row items-center justify-between w-full mx-auto gap-4">
-          <h1 className="text-2xl font-bold flex items-center">
-            <TableIcon className="mr-2 h-6 w-6 -600" /> DataForge
-          </h1>
-          <div className="flex justify-between md:justify-end space-x-4 w-[100%]">
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-full border hover:border-amber-300 dark:hover:border-blue-300 transition-colors duration-200"
-              aria-label="Toggle theme"
-            >
-              {theme === 'light' ? (
-                <Moon className="h-5 w-5 hover:text-blue-300 dark:hover:text-amber-300" />
-              ) : (
-                <Sun className="h-5 w-5 hover:text-blue-300 dark:hover:text-amber-300" />
-              )}
-            </button>
-            <div className="flex gap-2">
-              {dbInstance && (
-                <button
-                  onClick={handleClearDatabase}
-                  className="px-4 py-2 border border-red-500 rounded-lg text-red-500 hover:bg-red-700 hover:text-current flex items-center transition-colors duration-200"
-                >
-                  <TimerReset className="mr-2 h-4 w-4" /> Reset
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-        {tables.length > 0 && (
-          <div title="Tables Found">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              {...{
-                className:
-                  'mt-5 flex flex-row overflow-x-scroll md:overflow-hidden md:flex-wrap gap-2 hide-scrollbar ',
-              }}
-            >
-              {tables.map((table) => (
-                <button
-                  key={table.name}
-                  onClick={() => setSelectedTable(table.name)}
-                  className={`px-4 py-2 rounded-lg transition-all duration-200 ${selectedTable === table.name ? 'border border-[#10b981] text-[#10b981]' : 'border cursor-pointer hover:border-[#10b981] hover:text-[#10b981]'}`}
-                >
-                  {table.name}
-                </button>
-              ))}
-            </motion.div>
-            {selectedTable && (
-              <div className="py-4  border-b flex md:flex-row flex-col justify-between items-center gap-4 md:flex-3">
-                <div
-                  className="relative flex-2"
-                  style={{ width: '-webkit-fill-available' }}
-                >
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search rows..."
-                    style={{ width: '-webkit-fill-available' }}
-                    className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white  dark:bg-black/35 focus:outline-none focus:ring-2 focus:ring-[#10b981]"
-                  />
-                </div>
-                <div
-                  className="flex flex-wrap gap-2 flex-1 justify-start  md:justify-end"
-                  style={{ width: '-webkit-fill-available' }}
-                >
-                  <label
-                    className="flex items-center px-4 py-2 border rounded-lg cursor-pointer hover:border-[#10b981] hover:text-[#10b981] transition-colors duration-200"
-                    title="Upload another file"
-                  >
-                    {isLoading ? (
-                      <Loader2 className=" h-4 w-4" />
-                    ) : (
-                      <Upload className=" h-4 w-4" />
-                    )}
-                    <input
-                      type="file"
-                      accept=".db,.sqlite,.sqlite3,.sql"
-                      onChange={(e) =>
-                        e.target.files && handleFileUpload(e.target.files[0])
-                      }
-                      className="hidden"
-                      disabled={isLoading}
-                    />
-                  </label>
-
-                  {undoStack.length > 0 && (
-                    <button
-                      onClick={handleUndo}
-                      disabled={undoStack.length <= 0}
-                      className="px-4 py-2 border border-gray-200 rounded-lg hover:border-gray-700 disabled:border-gray-600 disabled:text-gray-600 text-gray-200 flex items-center transition-colors duration-200"
-                    >
-                      <Undo2 className="mr-2 h-4 w-4" /> Undo
-                    </button>
-                  )}
-                  <div
-                    className="relative"
-                    ref={exportMenuRef}
-                    title="Export Data"
-                  >
-                    <button
-                      onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-                      className="px-4 py-2 border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-700 hover:text-current flex items-center transition-colors duration-200"
-                    >
-                      <Download className="h-6 w-4" />
-                    </button>
-
-                    {isExportMenuOpen && (
-                      <div className="absolute bg-white dark:bg-gray-800 shadow-lg rounded-lg mt-2 right-0 z-10 w-[12rem]">
-                        {[
-                          { label: 'Full Database (SQLite)', value: 'full-db' },
-                          { label: 'Full Database (SQL)', value: 'full-sql' },
-                          { label: 'SQLite (Table)', value: 'sqlite' },
-                          { label: 'CSV', value: 'csv' },
-                          { label: 'JSON', value: 'json' },
-                          { label: 'SQL', value: 'sql' },
-                        ].map((option) => (
-                          <button
-                            key={option.value}
-                            onClick={() => {
-                              if (
-                                option.value === 'full-db' ||
-                                option.value === 'full-sql'
-                              ) {
-                                handleExportWithCustomName(
-                                  option.value as 'full-db' | 'full-sql'
-                                );
-                              } else {
-                                exportDatabase(option.value as any);
-                                setIsExportMenuOpen(false);
-                              }
-                            }}
-                            className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => {
-                      setFormData({});
-                      setShowModal('add');
-                    }}
-                    className="px-4 py-2 border text-green-400 border-green-400 rounded-lg hover:bg-green-700 hover:text-current flex items-center transition-colors duration-200"
-                    title="Add Row"
-                  >
-                    <Plus className=" h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteTable(selectedTable)}
-                    className="px-4 py-2 border border-red-500 rounded-lg text-red-500 flex hover:text-current hover:bg-red-700 items-center transition-colors duration-200"
-                    title={`Delete ${selectedTable}`}
-                  >
-                    <Trash2 className=" h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </header> */}
       <header className="bg-white dark:bg-black p-4 shadow-md sticky rounded-2xl top-0 z-10">
         <div className="flex flex-col sm:flex-row items-center justify-between w-full mx-auto gap-4">
           {/* Left Section - Logo */}
@@ -662,18 +507,36 @@ const DatabaseExplorer: React.FC = () => {
 
             {/* Mobile Menu Button */}
             <div className="flex gap-2">
-              {isMobileMenuOpen && (
-                <button
-                  onClick={toggleTheme}
-                  className="p-2 rounded-md border hover:border-amber-300 dark:hover:border-blue-300 transition-colors duration-200"
-                >
-                  {theme === 'light' ? (
-                    <Moon className="h-6 w-6" />
-                  ) : (
-                    <Sun className="h-6 w-6" />
-                  )}
-                </button>
-              )}
+              <button
+                onClick={toggleTheme}
+                className="md:hidden p-2 rounded-md border hover:border-amber-300 dark:hover:border-blue-300 transition-colors duration-200"
+              >
+                {theme === 'light' ? (
+                  <Moon className="h-6 w-6" />
+                ) : (
+                  <Sun className="h-6 w-6" />
+                )}
+              </button>
+
+              <label
+                className="flex md:hidden items-center px-4 py-2 border rounded-lg cursor-pointer hover:border-[#10b981] hover:text-[#10b981] transition-colors duration-200"
+                title="Upload another file"
+              >
+                {isLoading ? (
+                  <Loader2 className=" h-4 w-4" />
+                ) : (
+                  <Upload className=" h-4 w-4" />
+                )}
+                <input
+                  type="file"
+                  accept=".db,.sqlite,.sqlite3,.sql"
+                  onChange={(e) =>
+                    e.target.files && handleFileUpload(e.target.files[0])
+                  }
+                  className="hidden"
+                  disabled={isLoading}
+                />
+              </label>
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="p-2 rounded-lg border md:hidden hover:border-[#10b981]"
